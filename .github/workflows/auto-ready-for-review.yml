@@ -1,0 +1,31 @@
+name: Auto Ready for Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  auto-ready-for-review:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == true
+    steps:
+      - name: Check if PR should be marked as ready
+        id: check
+        run: |
+          echo "PR is currently a draft"
+          echo "Checking if it should be marked as ready for review..."
+          
+          # You can add custom conditions here
+          # For now, we'll mark it as ready automatically
+          echo "ready=true" >> $GITHUB_OUTPUT
+
+      - name: Mark PR as ready for review
+        if: steps.check.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr ready ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
