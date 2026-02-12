@@ -1,4 +1,4 @@
-name: Auto-convert all draft PRs to ready for review
+name: Auto-convert draft PRs on open/reopen
 
 on:
   pull_request:
