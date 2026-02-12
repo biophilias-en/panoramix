@@ -20,7 +20,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get draft PRs for this branch and output as space-separated list
-          prs=$(gh pr list --repo ${{ github.repository }} --head ${{ github.event.check_suite.head_branch }} --json number,isDraft --jq -r '[.[] | select(.isDraft == true) | .number] | join(" ")')
+          prs=$(gh pr list --repo ${{ github.repository }} --head ${{ github.event.check_suite.head_branch }} --json number,isDraft | jq -r '[.[] | select(.isDraft) | .number] | join(" ")')
           if [ -z "$prs" ]; then
             echo "No draft PRs found for this branch"
             echo "pr_numbers=" >> $GITHUB_OUTPUT
