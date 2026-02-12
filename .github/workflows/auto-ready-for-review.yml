@@ -18,9 +18,11 @@ jobs:
         id: get_prs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.check_suite.head_branch }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           # Get draft PRs for this branch and output as space-separated list
-          prs=$(gh pr list --repo ${{ github.repository }} --head "${{ github.event.check_suite.head_branch }}" --json number,isDraft | jq -r '[.[] | select(.isDraft) | .number] | join(" ")')
+          prs=$(gh pr list --repo "$REPOSITORY" --head "$HEAD_BRANCH" --json number,isDraft | jq -r '[.[] | select(.isDraft) | .number] | join(" ")')
           if [ -z "$prs" ]; then
             echo "No draft PRs found for this branch"
             echo "pr_numbers=" >> $GITHUB_OUTPUT
@@ -34,9 +36,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBERS: ${{ steps.get_prs.outputs.pr_numbers }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           # Iterate over PR numbers safely
           for pr_num in $PR_NUMBERS; do
             echo "Marking PR #$pr_num as ready for review"
-            gh pr ready "$pr_num" --repo ${{ github.repository }}
+            gh pr ready "$pr_num" --repo "$REPOSITORY"
           done
