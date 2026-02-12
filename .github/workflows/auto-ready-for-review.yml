@@ -12,27 +12,31 @@ permissions:
 jobs:
   auto-ready-for-review:
     runs-on: ubuntu-latest
-    if: github.event.check_suite.conclusion == 'success'
+    if: github.event.check_suite.conclusion == 'success' && github.event.check_suite.head_branch != ''
     steps:
       - name: Get pull requests for this commit
         id: get_prs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          prs=$(gh pr list --repo ${{ github.repository }} --head ${{ github.event.check_suite.head_branch }} --json number,isDraft --jq '.[] | select(.isDraft == true) | .number')
-          if [ -z "$prs" ]; then
+          # Get draft PRs for this branch and output as space-separated list
+          prs=$(gh pr list --repo ${{ github.repository }} --head ${{ github.event.check_suite.head_branch }} --json number,isDraft --jq '[.[] | select(.isDraft == true) | .number] | join(" ")')
+          if [ -z "$prs" ] || [ "$prs" = '""' ]; then
             echo "No draft PRs found for this branch"
-            echo "pr_number=" >> $GITHUB_OUTPUT
+            echo "pr_numbers=" >> $GITHUB_OUTPUT
           else
-            echo "pr_number=$prs" >> $GITHUB_OUTPUT
+            # Remove quotes from jq output
+            prs=$(echo "$prs" | tr -d '"')
+            echo "pr_numbers=$prs" >> $GITHUB_OUTPUT
+            echo "Found draft PR(s): $prs"
           fi
 
       - name: Mark PR as ready for review
-        if: steps.get_prs.outputs.pr_number != ''
+        if: steps.get_prs.outputs.pr_numbers != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for pr_num in ${{ steps.get_prs.outputs.pr_number }}; do
+          for pr_num in ${{ steps.get_prs.outputs.pr_numbers }}; do
             echo "Marking PR #$pr_num as ready for review"
             gh pr ready $pr_num --repo ${{ github.repository }}
           done
