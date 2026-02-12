@@ -1,31 +1,38 @@
 name: Auto Ready for Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  check_suite:
+    types: [completed]
 
 permissions:
   pull-requests: write
   contents: read
+  checks: read
 
 jobs:
   auto-ready-for-review:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == true
+    if: github.event.check_suite.conclusion == 'success'
     steps:
-      - name: Check if PR should be marked as ready
-        id: check
-        run: |
-          echo "PR is currently a draft"
-          echo "Checking if it should be marked as ready for review..."
-          
-          # You can add custom conditions here
-          # For now, we'll mark it as ready automatically
-          echo "ready=true" >> $GITHUB_OUTPUT
-
-      - name: Mark PR as ready for review
-        if: steps.check.outputs.ready == 'true'
+      - name: Get pull requests for this commit
+        id: get_prs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr ready ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
+          prs=$(gh pr list --repo ${{ github.repository }} --head ${{ github.event.check_suite.head_branch }} --json number,isDraft --jq '.[] | select(.isDraft == true) | .number')
+          if [ -z "$prs" ]; then
+            echo "No draft PRs found for this branch"
+            echo "pr_number=" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=$prs" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Mark PR as ready for review
+        if: steps.get_prs.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for pr_num in ${{ steps.get_prs.outputs.pr_number }}; do
+            echo "Marking PR #$pr_num as ready for review"
+            gh pr ready $pr_num --repo ${{ github.repository }}
+          done
