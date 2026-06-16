@@ -43,6 +43,10 @@ Here is an example for cryptokitties: https://oko.palkeo.com/0x06012c8cf97BEaD5d
 
 Windows is not supported currently.
 
+## Development
+
+Draft pull requests labeled `auto-finalize` are automatically marked ready for review when opened or reopened.
+
 ## Changelog
 
 ### 0.5.0

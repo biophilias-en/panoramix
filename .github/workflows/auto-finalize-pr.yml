@@ -1,0 +1,28 @@
+name: Auto-convert labeled draft PRs on open/reopen
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - labeled
+
+jobs:
+  mark-ready-for-review:
+    if: >-
+      github.event.pull_request.draft &&
+      contains(github.event.pull_request.labels.*.name, 'auto-finalize')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Mark pull request ready for review
+        uses: actions/github-script@v7.1.0
+        with:
+          script: |
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              draft: false,
+            })
